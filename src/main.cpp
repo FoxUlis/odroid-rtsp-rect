@@ -1,184 +1,46 @@
-/**
- * bouncecast - RTSP сервер с анимированным прямоугольником
- * Этап 3: Анимация движения с отскоком от границ
- *
- * Сборка:
- *   cd build && cmake .. && make
- * Запуск:
- *   ./bouncecast
- */
-
-#include "opencv2/highgui.hpp"
-#include <opencv2/opencv.hpp>
 #include <iostream>
-#include <chrono>
-#include <thread>
 #include <csignal>
+#include "camera_capture.h"
 
-// Глобальный флаг для выхода по Ctrl+C
 bool running = true;
 
 void signal_handler(int signum) {
-    std::cout << "\n👋 Получен сигнал выхода (Ctrl+C)" << std::endl;
+    std::cout << "\nВыход..." << std::endl;
     running = false;
 }
 
-// === КОНСТАНТЫ ПРЯМОУГОЛЬНИКА ===
-const int RECT_WIDTH = 30;
-const int RECT_HEIGHT = 20;
-
-// === ПАРАМЕТРЫ ДВИЖЕНИЯ ===
-int rect_x = 50;       // Начальная позиция X
-int rect_y = 50;       // Начальная позиция Y
-int rect_dx = 2;       // Скорость по X (45° = одинаковые dx и dy)
-int rect_dy = 2;       // Скорость по Y
-
-/**
- * Обновление позиции прямоугольника с отскоком от границ
- * @param frame_width Ширина кадра
- * @param frame_height Высота кадра
- */
-void update_rectangle(int frame_width, int frame_height) {
-    // Двигаем прямоугольник
-    rect_x += rect_dx;
-    rect_y += rect_dy;
-
-    // === ОТСКOK ОТ ЛЕВОЙ/ПРАВОЙ ГРАНИЦЫ ===
-    if (rect_x <= 0) {
-        rect_x = 0;           // Возвращаем в границы
-        rect_dx = -rect_dx;   // Меняем направление X
-        std::cout << "💥 Отскок от левой границы" << std::endl;
-    }
-    else if (rect_x + RECT_WIDTH >= frame_width) {
-        rect_x = frame_width - RECT_WIDTH;
-        rect_dx = -rect_dx;
-        std::cout << "💥 Отскок от правой границы" << std::endl;
-    }
-
-    // === ОТСКOK ОТ ВЕРХНЕЙ/НИЖНЕЙ ГРАНИЦЫ ===
-    if (rect_y <= 0) {
-        rect_y = 0;
-        rect_dy = -rect_dy;   // Меняем направление Y
-        std::cout << "💥 Отскок от верхней границы" << std::endl;
-    }
-    else if (rect_y + RECT_HEIGHT >= frame_height) {
-        rect_y = frame_height - RECT_HEIGHT;
-        rect_dy = -rect_dy;
-        std::cout << "💥 Отскок от нижней границы" << std::endl;
-    }
-}
-
-/**
- * Отрисовка прямоугольника на кадре
- * @param frame Кадр из камеры
- */
-void draw_rectangle(cv::Mat &frame) {
-    cv::Point top_left(rect_x, rect_y);
-    cv::Point bottom_right(rect_x + RECT_WIDTH, rect_y + RECT_HEIGHT);
-    cv::Scalar color(0, 255, 0);  // Зелёный (BGR)
-    cv::rectangle(frame, top_left, bottom_right, color, 2);
-
-    // (Опционально) Рисуем текст с координатами
-    std::string coords = "X: " + std::to_string(rect_x) + " Y: " + std::to_string(rect_y);
-    cv::putText(frame, coords, cv::Point(10, 30),
-                cv::FONT_HERSHEY_SIMPLEX, 0.7, cv::Scalar(0, 255, 255), 2);
-}
-
 int main() {
-    // Регистрируем обработчик Ctrl+C
     signal(SIGINT, signal_handler);
 
-    std::cout << "=== BOUNCECAST v0.3 ===" << std::endl;
-    std::cout << "Этап 3: Анимация с отскоком" << std::endl;
-    std::cout << std::endl;
+    std::cout << "=== Тест CameraCapture ===" << std::endl;
 
-    cv::VideoCapture cap(0);
+    CameraCapture cam(0);  // Камера по умолчанию
 
-    if (!cap.isOpened()) {
-        std::cerr << "❌ Ошибка: Не удалось открыть камеру!" << std::endl;
+    if (!cam.open()) {
+        std::cerr << "Ошибка инициализации!" << std::endl;
         return -1;
     }
 
-    std::cout << "✅ Камера открыта успешно" << std::endl;
-
-    // Устанавливаем разрешение
-    cap.set(cv::CAP_PROP_FRAME_WIDTH, 640);
-    cap.set(cv::CAP_PROP_FRAME_HEIGHT, 480);
-
-    int width = cap.get(cv::CAP_PROP_FRAME_WIDTH);
-    int height = cap.get(cv::CAP_PROP_FRAME_HEIGHT);
-
-    std::cout << "📷 Разрешение кадра: " << width << "x" << height << std::endl;
-    std::cout << "📦 Прямоугольник: " << RECT_WIDTH << "x" << RECT_HEIGHT << std::endl;
-    std::cout << "🚀 Скорость: dx=" << rect_dx << ", dy=" << rect_dy << std::endl;
-    std::cout << std::endl;
-    std::cout << "⏹  Для выхода нажми Ctrl+C (или 'q' в окне предпросмотра)" << std::endl;
-    std::cout << std::endl;
+    std::cout << "Разрешение: " << cam.getWidth() << "x" << cam.getHeight() << std::endl;
+    std::cout << "Нажми 'q' для выхода" << std::endl;
 
     cv::Mat frame;
-    int frame_count = 0;
-    int bounce_count = 0;
-    auto start_time = std::chrono::steady_clock::now();
-
-    // Создаём окно для предпросмотра
-
-    cv::namedWindow("BounceCast Preview", cv::WINDOW_AUTOSIZE);
+    cv::namedWindow("Camera Test", cv::WINDOW_AUTOSIZE);
 
     while (running) {
-        cap >> frame;
-
-        if (frame.empty()) {
+        if (!cam.read(frame)) {
+            std::cerr << "Ошибка захвата кадра!" << std::endl;
             continue;
         }
 
-        int frame_width = frame.cols;
-        int frame_height = frame.rows;
+        cv::imshow("Camera Test", frame);
 
-        cv::resizeWindow("BounceCast Preview", frame_width, frame_height);
-
-        // Обновляем позицию (с отскоком)
-        update_rectangle(frame_width, frame_height);
-
-        // Рисуем прямоугольник на новой позиции
-        draw_rectangle(frame);
-
-        frame_count++;
-
-        // Отображение в окне
-        cv::imshow("BounceCast Preview", frame);
-
-        // Обработка клавиш (q = выход)
-        char key = cv::waitKey(1);
-        if (key == 'q' || key == 27) {
-            std::cout << "👋 Выход по команде пользователя" << std::endl;
-            break;
-        }
-
-        // Сохраняем каждый 120-й кадр (~4 секунды)
-        if (frame_count % 120 == 0) {
-            std::string filename = "test_output/anim_frame_" + std::to_string(frame_count) + ".jpg";
-            cv::imwrite(filename, frame);
-            std::cout << "📸 Сохранён: " << filename << std::endl;
-        }
-
-        // Задержка для ~30 FPS
-        std::this_thread::sleep_for(std::chrono::milliseconds(33));
+        if (cv::waitKey(1) == 'q') break;
     }
 
-    auto end_time = std::chrono::steady_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::seconds>(end_time - start_time);
-
-    std::cout << std::endl;
-    std::cout << "=== СТАТИСТИКА ===" << std::endl;
-    std::cout << "Кадров: " << frame_count << std::endl;
-    std::cout << "Время: " << duration.count() << " сек" << std::endl;
-    if (duration.count() > 0) {
-        std::cout << "Средний FPS: " << (frame_count / duration.count()) << std::endl;
-    }
-
-    cap.release();
+    cam.release();
     cv::destroyAllWindows();
 
-    std::cout << "✅ Выход завершён" << std::endl;
+    std::cout << "Тест завершён" << std::endl;
     return 0;
 }
