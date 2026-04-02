@@ -1,0 +1,6 @@
+CompileFlags:
+  Add:
+    - -I/usr/include/opencv4
+    - -I/usr/include
+    - --std=c++11
+    - -DOPENCV_VERSION=4.13.0

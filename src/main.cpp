@@ -8,6 +8,7 @@
  *   ./bouncecast
  */
 
+#include "opencv2/highgui.hpp"
 #include <opencv2/opencv.hpp>
 #include <iostream>
 #include <chrono>
@@ -120,6 +121,7 @@ int main() {
     auto start_time = std::chrono::steady_clock::now();
 
     // Создаём окно для предпросмотра
+
     cv::namedWindow("BounceCast Preview", cv::WINDOW_AUTOSIZE);
 
     while (running) {
@@ -129,8 +131,13 @@ int main() {
             continue;
         }
 
+        int frame_width = frame.cols;
+        int frame_height = frame.rows;
+
+        cv::resizeWindow("BounceCast Preview", frame_width, frame_height);
+
         // Обновляем позицию (с отскоком)
-        update_rectangle(width, height);
+        update_rectangle(frame_width, frame_height);
 
         // Рисуем прямоугольник на новой позиции
         draw_rectangle(frame);
