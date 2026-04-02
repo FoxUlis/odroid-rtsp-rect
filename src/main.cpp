@@ -1,9 +1,9 @@
 /**
  * bouncecast - RTSP сервер с анимированным прямоугольником
- * Этап 1: Захват видео с веб-камеры
+ * Этап 2: Отрисовка прямоугольника на кадре
  *
- * Компиляция:
- *   mkdir build && cd build && cmake .. && make
+ * Сборка:
+ *   cd build && cmake .. && make
  * Запуск:
  *   ./bouncecast
  */
@@ -13,91 +13,107 @@
 #include <chrono>
 #include <thread>
 
+// === КОНСТАНТЫ ПРЯМОУГОЛЬНИКА ===
+const int RECT_WIDTH = 30;   // Ширина прямоугольника (пиксели)
+const int RECT_HEIGHT = 20;  // Высота прямоугольника (пиксели)
+const int RECT_X = 50;       // Начальная позиция X
+const int RECT_Y = 50;       // Начальная позиция Y
+
+/**
+ * Функция отрисовки прямоугольника на кадре
+ * @param frame Кадр из камеры (cv::Mat)
+ */
+void draw_rectangle(cv::Mat &frame) {
+    // Координаты левого верхнего угла
+    cv::Point top_left(RECT_X, RECT_Y);
+
+    // Координаты правого нижнего угла
+    cv::Point bottom_right(RECT_X + RECT_WIDTH, RECT_Y + RECT_HEIGHT);
+
+    // Цвет: зелёный (B, G, R) = (0, 255, 0)
+    cv::Scalar color(0, 255, 0);
+
+    // Толщина линии: 2 пикселя
+    int thickness = 2;
+
+    // Рисуем прямоугольник
+    cv::rectangle(frame, top_left, bottom_right, color, thickness);
+}
+
 int main() {
-    std::cout << "=== BOUNCECAST v0.1 ===" << std::endl;
-    std::cout << "Этап 1: Захват с веб-камеры" << std::endl;
+    std::cout << "=== BOUNCECAST v0.2 ===" << std::endl;
+    std::cout << "Этап 2: Отрисовка прямоугольника" << std::endl;
     std::cout << std::endl;
 
-    // 1. Открываем камеру (device /dev/video0)
+    // 1. Открываем камеру
     cv::VideoCapture cap(0);
 
     if (!cap.isOpened()) {
         std::cerr << "❌ Ошибка: Не удалось открыть камеру!" << std::endl;
-        std::cerr << "   Проверьте, подключена ли камера (lsusb)" << std::endl;
         return -1;
     }
 
     std::cout << "✅ Камера открыта успешно" << std::endl;
 
-    // 2. Устанавливаем разрешение (640x480 для стабильности)
+    // 2. Устанавливаем разрешение
     cap.set(cv::CAP_PROP_FRAME_WIDTH, 640);
     cap.set(cv::CAP_PROP_FRAME_HEIGHT, 480);
 
-    // 3. Получаем фактическое разрешение
     int width = cap.get(cv::CAP_PROP_FRAME_WIDTH);
     int height = cap.get(cv::CAP_PROP_FRAME_HEIGHT);
-    double fps = cap.get(cv::CAP_PROP_FPS);
 
     std::cout << "📷 Разрешение: " << width << "x" << height << std::endl;
-    std::cout << "📷 FPS: " << fps << std::endl;
+    std::cout << "📦 Размер прямоугольника: " << RECT_WIDTH << "x" << RECT_HEIGHT << std::endl;
     std::cout << std::endl;
 
-    // 4. Создаём окно для предпросмотра (опционально)
-    cv::namedWindow("BounceCast Preview", cv::WINDOW_AUTOSIZE);
-
-    // 5. Основной цикл захвата
+    // 3. Основной цикл
     cv::Mat frame;
     int frame_count = 0;
-    auto start_time = std::chrono::steady_clock::now();
 
-    std::cout << " Захват видео... (нажми 'q' для выхода)" << std::endl;
+    std::cout << " Захват видео с прямоугольником... (нажми 'q' для выхода)" << std::endl;
 
     while (true) {
-        // Читаем кадр с камеры
+        // Читаем кадр
         cap >> frame;
 
-        // Проверяем, что кадр не пустой
         if (frame.empty()) {
-            std::cerr << "⚠️  Пустой кадр, пропускаем..." << std::endl;
+            std::cerr << "⚠️  Пустой кадр" << std::endl;
             continue;
         }
 
+        // === ОТРИСОВКА ПРЯМОУГОЛЬНИКА ===
+        draw_rectangle(frame);
+        // =================================
+
         frame_count++;
 
-        // Отображаем кадр в окне
+        // Отображение (если есть GUI)
         cv::imshow("BounceCast Preview", frame);
 
-        // Обработка нажатий клавиш
+        // Обработка клавиш
         char key = cv::waitKey(1);
-        if (key == 'q' || key == 27) {  // 'q' или Escape
-            std::cout << "👋 Выход по команде пользователя" << std::endl;
+        if (key == 'q' || key == 27) {
+            std::cout << "👋 Выход" << std::endl;
             break;
         }
 
-        // Сохраняем тестовый снимок каждые 30 кадров
-        if (frame_count % 30 == 0) {
-            std::string filename = "test_output/frame_" + std::to_string(frame_count) + ".jpg";
+        // Сохраняем кадр каждые 60 кадров (примерно 2 секунды)
+        if (frame_count % 60 == 0) {
+            std::string filename = "test_output/rect_frame_" + std::to_string(frame_count) + ".jpg";
             cv::imwrite(filename, frame);
-            std::cout << "📸 Сохранён тестовый кадр: " << filename << std::endl;
+            std::cout << "📸 Сохранён кадр с прямоугольником: " << filename << std::endl;
         }
     }
 
-    // 6. Статистика
-    auto end_time = std::chrono::steady_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::seconds>(end_time - start_time);
-
+    // 4. Статистика
     std::cout << std::endl;
     std::cout << "=== СТАТИСТИКА ===" << std::endl;
-    std::cout << "Всего кадров: " << frame_count << std::endl;
-    std::cout << "Время работы: " << duration.count() << " сек" << std::endl;
-    if (duration.count() > 0) {
-        std::cout << "Средний FPS: " << (frame_count / duration.count()) << std::endl;
-    }
+    std::cout << "Всего кадров обработано: " << frame_count << std::endl;
 
-    // 7. Освобождение ресурсов
+    // 5. Освобождение ресурсов
     cap.release();
     cv::destroyAllWindows();
 
-    std::cout << "✅ Ресурсы освобождены, выход" << std::endl;
+    std::cout << "✅ Ресурсы освобождены" << std::endl;
     return 0;
 }
