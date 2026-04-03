@@ -7,7 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(OpenCV REQUIRED)
 
 find_package(PkgConfig REQUIRED)
-pkg_check_modules(GST REQUIRED 
+pkg_check_modules(GST REQUIRED
     gstreamer-1.0
     gstreamer-app-1.0
     gstreamer-rtsp-server-1.0
@@ -15,6 +15,8 @@ pkg_check_modules(GST REQUIRED
 
 set(SOURCES
     src/main.cpp
+    src/camera_capture.cpp
+    src/rectangle.cpp
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES})
