@@ -1,5 +1,8 @@
+#include <chrono>
 #include <iostream>
 #include <csignal>
+#include <thread>
+
 #include "camera_capture.h"
 #include "rectangle.h"
 
@@ -16,9 +19,6 @@ int main() {
     std::cout << "=== Тест Камера + прямоугольник ===" << std::endl;
 
     CameraCapture cam(0);  // Камера по умолчанию
-    if (!cam.open()) {
-        return -1;
-    }
 
     Rectangle rect(30, 20, 50, 50);
 
@@ -40,7 +40,7 @@ int main() {
             continue;
         }
 
-        rect.update(cam.getWidth(), cam.getHeight());
+        rect.update(frame.cols, frame.rows);
         rect.draw(frame);
 
         frame_count++;
@@ -48,6 +48,8 @@ int main() {
         cv::imshow("Test", frame);
 
         if (cv::waitKey(1) == 'q') break;
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(33));
     }
 
     auto end_time = std::chrono::steady_clock::now();
