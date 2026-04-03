@@ -17,6 +17,7 @@ set(SOURCES
     src/main.cpp
     src/camera_capture.cpp
     src/rectangle.cpp
+    src/stream_encoder.cpp
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES})
