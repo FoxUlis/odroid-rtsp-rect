@@ -1,6 +1,7 @@
 #include <iostream>
 #include <csignal>
 #include "camera_capture.h"
+#include "rectangle.h"
 
 bool running = true;
 
@@ -12,9 +13,14 @@ void signal_handler(int signum) {
 int main() {
     signal(SIGINT, signal_handler);
 
-    std::cout << "=== Тест CameraCapture ===" << std::endl;
+    std::cout << "=== Тест Камера + прямоугольник ===" << std::endl;
 
     CameraCapture cam(0);  // Камера по умолчанию
+    if (!cam.open()) {
+        return -1;
+    }
+
+    Rectangle rect(30, 20, 50, 50);
 
     if (!cam.open()) {
         std::cerr << "Ошибка инициализации!" << std::endl;
@@ -37,9 +43,12 @@ int main() {
             continue;
         }
 
+        rect.update(cam.getWidth(), cam.getHeight());
+        rect.draw(frame);
+
         frame_count++;
 
-        cv::imshow("Camera Test", frame);
+        cv::imshow("Test", frame);
 
         if (cv::waitKey(1) == 'q') break;
     }
