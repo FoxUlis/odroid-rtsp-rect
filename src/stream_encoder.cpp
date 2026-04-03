@@ -6,6 +6,7 @@
 #include "gst/gstelement.h"
 #include "gst/gstobject.h"
 #include "gst/gstpad.h"
+#include <ctime>
 #include <iostream>
 #include <string>
 
@@ -76,36 +77,30 @@ void StreamEncoder::pushFrame(const cv::Mat &frame) {
         return;
     }
 
-    //Создаем буфер Gstreamer
-    // Выделяем память под размер кадра
-    GstBuffer *buffer = gst_buffer_new_allocate(
-        nullptr,
-        frame.total() * frame.elemSize(),
-        nullptr);
+    cv::Mat continuousFrame;
 
-    //Копируем данные из cv::Mat в буффер
-    // frame.data указывает на сырые байты изображения
-    gst_buffer_fill(
-        buffer,
-        0,
-        frame.data,
-        frame.total() * frame.elemSize());
+    if(!frame.isContinuous()) {
+        continuousFrame = frame.clone();
+    } else {
+        continuousFrame = frame;
+    }
 
-    //Устанавливаем временные метки
-    // PTS (Presentation Time Stamp)= когда показывать кадр
-    // Duration - сколько длится кадр
+    const size_t dataSize = width * height * 3;
+
+    GstBuffer *buffer = gst_buffer_new_allocate(nullptr, dataSize, nullptr);
+
+    gst_buffer_fill(buffer, 0, continuousFrame.data, dataSize);
+
     GST_BUFFER_PTS(buffer) = timestamp;
     GST_BUFFER_DURATION(buffer) = gst_util_uint64_scale(1, GST_SECOND, fps);
     timestamp += GST_BUFFER_DURATION(buffer);
 
-    //Отправляем буфер в пайплайн
     GstFlowReturn ret;
     g_signal_emit_by_name(appsrc, "push-buffer", buffer, &ret);
 
-    //освобождаем буффер
     gst_buffer_unref(buffer);
 
-    if (ret != GST_FLOW_OK) {
+    if(ret != GST_FLOW_OK) {
         std::cerr << "Ошибка отправки кадра: " << gst_flow_get_name(ret) << std::endl;
     }
 }
