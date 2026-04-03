@@ -41,7 +41,7 @@ bool StreamEncoder::init(const std::string &output_path) {
         ",framerate=" + std::to_string(fps) + "/1 ! " +
         "videoconvert ! " +
         "video/x-raw,format=I420 ! " +
-        "x264enc speed-preset=ultrafast tune=zerolatency config-interval=1 ! " +
+        "x264enc speed-preset=ultrafast tune=zerolatency  ! " +
         "h264parse ! " +
         "video/x-h264,stream-format=byte-stream,alignment=au ! " +
         "filesink location=" + output_path;
