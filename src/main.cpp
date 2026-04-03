@@ -34,9 +34,6 @@ int main() {
     int frame_count = 0;
     auto start_time = std::chrono::steady_clock::now();
 
-
-    cv::namedWindow("Camera Test", cv::WINDOW_AUTOSIZE);
-
     while (running) {
         if (!cam.read(frame)) {
             std::cerr << "Ошибка захвата кадра!" << std::endl;
