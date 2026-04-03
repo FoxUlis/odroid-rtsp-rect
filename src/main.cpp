@@ -4,7 +4,7 @@
 #include <thread>
 #include "camera_capture.h"
 #include "rectangle.h"
-#include "stream_encoder.h"  // ← Новый заголовок
+#include "stream_encoder.h"
 
 bool running = true;
 
