@@ -34,7 +34,6 @@ bool RtspServer::start(const std::string &mount_point, int port) {
     std::string pipeline_str =
         "( appsrc name=src is-live=true format=time ! "
         "videoconvert ! "
-        "video/x-raw,format=I420 ! "
         "x264enc speed-preset=ultrafast tune=zerolatency bitrate=2048 key-int-max=30 force-idr=1 ! "
         "video/x-h264,profile=baseline ! "
         "rtph264pay name=pay0 pt=96 config-interval=1 )";
@@ -145,7 +144,7 @@ void RtspServer::onMediaConfigure(GstRTSPMediaFactory *factory,
 
         GstCaps *caps = gst_caps_new_simple(
             "video/x-raw",
-            "format", G_TYPE_STRING, "I420",
+            "format", G_TYPE_STRING, "BGR",
             "width", G_TYPE_INT, self->width,
             "height", G_TYPE_INT, self->height,
             "framerate", GST_TYPE_FRACTION, self->fps, 1,
