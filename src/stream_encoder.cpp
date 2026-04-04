@@ -46,7 +46,8 @@ void StreamEncoder::pushFrame(const cv::Mat &frame) {
     GstElement *appsrc = rtsp_server->getAppsrc();
     cv::Mat continuousFrame = frame.isContinuous() ? frame : frame.clone();
 
-    if (!appsrc) {
+    // Не отправляем кадры, пока клиент не готов (media не в PLAYING)
+    if (!appsrc || !rtsp_server->isClientReady()) {
         return;
     }
 

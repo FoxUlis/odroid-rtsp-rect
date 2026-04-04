@@ -9,7 +9,7 @@
 
 RtspServer::RtspServer(int w, int h, int f)
     : server(nullptr), factory(nullptr), appsrc(nullptr),
-      width(w), height(h), fps(f), running(false), main_loop(nullptr) {}
+      width(w), height(h), fps(f), running(false), client_ready(false), main_loop(nullptr) {}
 
 RtspServer::~RtspServer() {
     stop();
@@ -74,6 +74,7 @@ bool RtspServer::start(const std::string &mount_point, int port) {
     std::cout << "Ожидание подключения клиентов..." << std::endl;
     std::cout << std::endl;
 
+    client_ready = false;
     running = true;
     return true;
 }
@@ -101,6 +102,7 @@ void RtspServer::stop() {
 
     factory = nullptr;
     appsrc = nullptr;
+    client_ready = false;
     running = false;
 
     std::cout << "RTSP сервер остановлен" << std::endl;
@@ -143,11 +145,20 @@ void RtspServer::onMediaConfigure(GstRTSPMediaFactory *factory,
 
         self->appsrc = appsrc;
 
+        g_signal_connect(media, "prepared",
+                         G_CALLBACK(onMediaPrepared), self);
+
         gst_object_unref(element);
     } else {
         std::cerr << "❌ Не удалось найти appsrc в пайплайне" << std::endl;
         gst_object_unref(element);
     }
+}
+
+void RtspServer::onMediaPrepared(GstRTSPMedia *media, gpointer user_data) {
+    RtspServer *self = static_cast<RtspServer*>(user_data);
+    self->client_ready = true;
+    std::cout << "🚀 Media готова (prepared/PLAYING)" << std::endl;
 }
 
 void RtspServer::cleanup() {

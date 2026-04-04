@@ -27,9 +27,15 @@ public:
     // Проверка, запущен ли сервер
     bool isRunning() const { return running; }
 
+    // Проверка готовности клиента (media в состоянии prepared/PLAYING)
+    bool isClientReady() const { return client_ready; }
+
 private:
     // Обработчик подключения клиента
     static void onMediaConfigure(GstRTSPMediaFactory *factory, GstRTSPMedia *media, gpointer user_data);
+
+    // Обработчик перехода media в состояние prepared
+    static void onMediaPrepared(GstRTSPMedia *media, gpointer user_data);
 
     // Очистка ресурсов
     void cleanup();
@@ -41,6 +47,7 @@ private:
     int width, height, fps;
     std::string rtsp_url;
     bool running;
+    bool client_ready;
     GMainLoop *main_loop;
     std::thread loop_thread;
 };
