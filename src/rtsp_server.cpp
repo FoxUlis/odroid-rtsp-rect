@@ -42,6 +42,12 @@ bool RtspServer::start(const std::string &mount_point, int port) {
     gst_rtsp_media_factory_set_shared(factory, TRUE);  // Несколько клиентов
     gst_rtsp_media_factory_set_latency(factory, 0);
 
+    // Принудительно разрешаем только TCP (interleaved) транспорт
+    gst_rtsp_media_factory_set_protocols(
+        factory,
+        GST_RTSP_LOWER_TRANS_TCP
+    );
+
     // === ПОДКЛЮЧАЕМ ОБРАБОТЧИК "media-configure" ===
     // Вызывается при подключении каждого клиента
     g_signal_connect(factory, "media-configure",
