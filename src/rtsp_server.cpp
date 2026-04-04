@@ -31,6 +31,7 @@ bool RtspServer::start(const std::string &mount_point, int port) {
         ",height=" + std::to_string(height) +
         ",framerate=" + std::to_string(fps) + "/1 ! "
         "videoconvert ! "
+        "video/x-raw,format=I420 ! "
         "videorate ! video/x-raw,framerate=" + std::to_string(fps) + "/1 ! "
         "x264enc speed-preset=ultrafast tune=zerolatency bframes=0 "
         "key-int-max=" + std::to_string(fps) + " ! "

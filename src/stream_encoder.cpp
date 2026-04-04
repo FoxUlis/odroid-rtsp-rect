@@ -44,16 +44,30 @@ void StreamEncoder::pushFrame(const cv::Mat &frame) {
     }
 
     GstElement *appsrc = rtsp_server->getAppsrc();
+    cv::Mat continuousFrame = frame.isContinuous() ? frame : frame.clone();
 
     if (!appsrc) {
         return;
     }
 
-    cv::Mat continuousFrame = frame.isContinuous() ? frame : frame.clone();
+    if (frame.cols != width || frame.rows != height) {
+        std::cerr << "Размер кадра: " << frame.cols << "x" << frame.rows
+        << "(ожидалось: " << width << "x" << height << ")" << std::endl;
+
+        cv::Mat resized;
+        cv::resize(frame, resized, cv::Size(width, height));
+        continuousFrame  = resized;
+    } else {
+        continuousFrame = frame.isContinuous() ? frame : frame.clone();
+    }
+
     const size_t dataSize = width * height * 3;
 
     if(continuousFrame.total() * continuousFrame.elemSize() != dataSize) {
-        std::cerr << "Размер кадра не совпадает!" << std::endl;
+        std::cerr << "Размер данных не совпадает: "
+        << (continuousFrame.total() * continuousFrame.elemSize())
+        << " vs " << dataSize << std::endl;
+
         return;
     }
 
