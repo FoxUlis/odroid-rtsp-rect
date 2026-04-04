@@ -1,7 +1,6 @@
 #include <iostream>
 #include <csignal>
 #include <chrono>
-#include <regex>
 #include <thread>
 #include "camera_capture.h"
 #include "rectangle.h"
@@ -10,15 +9,15 @@
 bool running = true;
 
 void signal_handler(int /* signum */) {
-    std::cout << "\n👋 Выход..." << std::endl;
+    std::cout << "\n Выход..." << std::endl;
     running = false;
 }
 
 int main() {
     signal(SIGINT, signal_handler);
 
-    std::cout << "=== BOUNCECAST v0.4 ===" << std::endl;
-    std::cout << "Этап 4: Кодирование H.264" << std::endl;
+    std::cout << "=== BOUNCECAST v0.5 ===" << std::endl;
+    std::cout << "Этап 5: RTSP Стриминг" << std::endl;
     std::cout << std::endl;
 
     // === ИНИЦИАЛИЗАЦИЯ GSTREAMER ===
@@ -33,14 +32,16 @@ int main() {
     // 2. Прямоугольник
     Rectangle rect(30, 20, 50, 50);
 
-    // 3. Кодировщик (передаём реальные размеры)
+    // 3. Кодировщик (RTSP)
     StreamEncoder encoder(cam.getWidth(), cam.getHeight(), 30);
-    if (!encoder.init("output.h264")) {
+    if (!encoder.initRtsp("/stream", 8554)) {
         std::cerr << "Ошибка инициализации encoder!" << std::endl;
         return -1;
     }
 
-    std::cout << "📹 Запись в output.h264... (Ctrl+C для остановки)" << std::endl;
+    std::cout << "📡 Стриминг: " << encoder.getRtspUrl() << std::endl;
+    std::cout << "Подключайтесь в VLC: rtsp://<IP-плата>:8554/stream" << std::endl;
+    std::cout << "(Ctrl+C для остановки)" << std::endl;
     std::cout << std::endl;
 
     cv::Mat frame;
@@ -62,7 +63,7 @@ int main() {
         rect.update(frame.cols, frame.rows);
         rect.draw(frame);
 
-        // === ОТПРАВКА НА КОДИРОВАНИЕ ===
+        // === ОТПРАВКА НА СТРИМИНГ ===
         encoder.pushFrame(frame);
 
         // Предпросмотр (можно закомментировать для headless)
@@ -73,10 +74,10 @@ int main() {
         auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(frame_end - frame_start);
 
         if (elapsed < frame_duration) {
-
+            std::this_thread::sleep_for(frame_duration - elapsed);
         }
 
-
+        frame_count++;
     }
 
     // Статистика
@@ -87,7 +88,7 @@ int main() {
     std::cout << "=== СТАТИСТИКА ===" << std::endl;
     std::cout << "Кадров: " << frame_count << std::endl;
     std::cout << "Время: " << duration.count() << " сек" << std::endl;
-    std::cout << "Файл: output.h264" << std::endl;
+    std::cout << "Средний FPS: " << (frame_count / (duration.count() ? duration.count() : 1)) << std::endl;
 
     // Очистка
     cam.release();

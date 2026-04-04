@@ -5,17 +5,19 @@
 #include <gst/app/gstappsrc.h>
 #include <opencv2/opencv.hpp>
 #include <string>
+#include "gst/gstclock.h"
+#include "rtsp_server.h"
 
 class StreamEncoder {
 public:
     // Конструктор (размеры кадра и FPS)
-    StreamEncoder(int width, int height, int fps = 30);
+    StreamEncoder(int width, int height, int fps = 25);
 
     // Деструктор (освобождение ресурсов)
     ~StreamEncoder();
 
     // Инициализация пайплайна (путь к выходному файлу)
-    bool init(const std::string &output_path = "output.h264");
+    bool initRtsp(const std::string &mnt_point = "/stream", int port = 8554);
 
     // Отправка кадра на кодирование
     void pushFrame(const cv::Mat &frame);
@@ -23,12 +25,14 @@ public:
     // Остановка и очистка
     void stop();
 
+    std::string getRtspUrl() const;
+
 private:
-    GstElement *pipeline;    // GStreamer пайплайн
-    GstElement *appsrc;      // Источник данных (мы подаём кадры сюда)
-    int width, height, fps;  // Параметры видео
-    GstClockTime timestamp;  // Временная метка для каждого кадра
-    bool initialized;        // Флаг инициализации
+    RtspServer *rtsp_server;
+    int width, height, fps;
+    GstClockTime timestamp;
+    bool initialized;
+
 };
 
 #endif

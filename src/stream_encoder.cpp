@@ -1,120 +1,97 @@
 #include "stream_encoder.h"
 #include "glib-object.h"
-#include "gst/gstbin.h"
 #include "gst/gstbuffer.h"
 #include "gst/gstclock.h"
 #include "gst/gstelement.h"
-#include "gst/gstobject.h"
 #include "gst/gstpad.h"
+#include "rtsp_server.h"
 #include <ctime>
 #include <iostream>
 #include <string>
 
-StreamEncoder::StreamEncoder(int w, int h, int fps):
-    pipeline(nullptr), appsrc(nullptr),
-    width(w), height(h), fps(fps), timestamp(0), initialized(false) {}
+StreamEncoder::StreamEncoder(int w, int h, int fps)
+    : rtsp_server(nullptr), width(w), height(h), fps(25),
+    timestamp(0), initialized(false) {}
 
 StreamEncoder::~StreamEncoder() {
     stop();
 }
 
-bool StreamEncoder::init(const std::string &output_path) {
+bool StreamEncoder::initRtsp(const std::string &mnt_point, int port) {
     if (initialized) {
         std::cerr << "Encoder уже инициализирован" << std::endl;
         return false;
     }
 
-    GError *error = nullptr;
+    rtsp_server = new RtspServer(width, height, fps);
 
-    // === СТРОИМ ПАЙПЛАЙН ===
-    // appsrc → videoconvert → x264enc → h264parse → filesink
-    //
-    // appsrc: принимает raw-данные от нас
-    // videoconvert: конвертирует BGR → формат для кодировщика
-    // x264enc: кодирует в H.264
-    // h264parse: делает поток корректным (stream-format=byte-stream)
-    // filesink: пишет в файл
-
-    std::string pipeline_str =
-        "appsrc name=src "
-        "is-live=true "
-        "format=time "
-        "do-timestamp=true "
-        "caps=video/x-raw,format=BGR,width=" + std::to_string(width) +
-        ",height=" + std::to_string(height) + " ! "
-        "videoconvert ! "
-        "videorate ! "
-        "video/x-raw,format=I420,framerate=25/1 ! "
-        "x264enc "
-        "speed-preset=ultrafast "
-        "tune=zerolatency "
-        "bframes=0 "
-        "key-int-max=25 "
-        "byte-stream=true ! "
-        "h264parse config-interval=1 ! "
-        "video/x-h264,stream-format=byte-stream,alignment=au ! "
-        "filesink location=" + output_path;
-
-    std::cout << "Пайплайн GStreamer" << std::endl;
-    std::cout << pipeline_str << std::endl << std::endl;
-
-    pipeline = gst_parse_launch(pipeline_str.c_str(), &error);
-
-    if (error) {
-        std::cerr << "Ошибка создания пайплайна" << error->message << std::endl;
-        g_error_free(error);
+    if (!rtsp_server -> start(mnt_point, port)) {
+        std::cerr << "Ошибка запуска RTSP сервера" << std::endl;
+        delete rtsp_server;
+        rtsp_server = nullptr;
         return false;
     }
-
-    appsrc = gst_bin_get_by_name(GST_BIN(pipeline), "src");
-
-    if (!appsrc) {
-        std::cerr << "Не удалось получить appsrc" << std::endl;
-        return false;
-    }
-
-    gst_element_set_state(pipeline, GST_STATE_PLAYING);
 
     initialized = true;
-    std::cout << "GStreamer инициализирован" << std::endl;
+    timestamp = 0;
     return true;
 }
 
 void StreamEncoder::pushFrame(const cv::Mat &frame) {
 
-        if (!initialized || !appsrc || frame.empty()) {
-            return;
-        }
-
-        cv::Mat continuousFrame = frame.isContinuous() ? frame : frame.clone();
-
-        const size_t dataSize = width * height * 3;
-
-        GstBuffer *buffer = gst_buffer_new_allocate(nullptr, dataSize, nullptr);
-        gst_buffer_fill(buffer, 0, continuousFrame.data, dataSize);
-
-        GstFlowReturn ret;
-        g_signal_emit_by_name(appsrc, "push-buffer", buffer, &ret);
-        gst_buffer_unref(buffer);
-
-        if (ret != GST_FLOW_OK) {
-            std::cerr << "Ошибка отправки кадра: "
-                      << gst_flow_get_name(ret) << std::endl;
-        }
+    if (!initialized || frame.empty()){
+        return;
     }
+
+    GstElement *appsrc = rtsp_server->getAppsrc();
+
+    if (!appsrc) {
+        return;
+    }
+
+    cv::Mat continuousFrame = frame.isContinuous() ? frame : frame.clone();
+    const size_t dataSize = width * height * 3;
+
+    if(continuousFrame.total() * continuousFrame.elemSize() != dataSize) {
+        std::cerr << "Размер кадра не совпадает!" << std::endl;
+        return;
+    }
+
+    GstBuffer *buffer = gst_buffer_new_allocate(nullptr, dataSize, nullptr);
+
+    //копирование данных
+    gst_buffer_fill(buffer, 0, continuousFrame.data, dataSize);
+
+    //Временные метки
+    GST_BUFFER_PTS(buffer) = timestamp;
+    GST_BUFFER_DTS(buffer) = timestamp;
+    GST_BUFFER_DURATION(buffer) = GST_SECOND / fps;
+    timestamp += GST_SECOND / fps;
+
+    //отправка
+    GstFlowReturn ret;
+    g_signal_emit_by_name(appsrc, "push-buffer", buffer, &ret);
+    gst_buffer_unref(buffer);
+
+    if (ret != GST_FLOW_OK && ret != GST_FLOW_FLUSHING){
+        std::cerr << "Ошибка отправки: " << gst_flow_get_name(ret) << std::endl;
+    }
+
+}
 
 void StreamEncoder::stop() {
-    if (pipeline) {
-        gst_element_set_state(pipeline, GST_STATE_NULL);
+    if(!initialized) return;
 
-        if (appsrc) {
-            gst_object_unref(appsrc);
-            appsrc = nullptr;
-        }
-        gst_object_unref(pipeline);
-        pipeline = nullptr;
-
-        initialized = false;
-        std::cout << "GStreamer остановлен" << std::endl;
+    if(rtsp_server){
+        rtsp_server->stop();
+        delete rtsp_server;
+        rtsp_server = nullptr;
     }
+
+    initialized = false;
+    std::cout << "StreamEncoder оставлен" << std::endl;
+}
+
+std::string StreamEncoder::getRtspUrl()const {
+    return rtsp_server ? rtsp_server->getUrl() : "";
 }
