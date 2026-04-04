@@ -50,7 +50,7 @@ int main() {
     auto start_time = std::chrono::steady_clock::now();
 
     // Опционально: предпросмотр
-    cv::namedWindow("Preview", cv::WINDOW_AUTOSIZE);
+    // cv::namedWindow("Preview", cv::WINDOW_AUTOSIZE);
 
     const int target_fps = 25;
     const auto frame_duration = std::chrono::milliseconds(1000 / target_fps);

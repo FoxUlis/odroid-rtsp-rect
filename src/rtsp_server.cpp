@@ -3,6 +3,7 @@
 #include <iostream>
 #include <gst/gst.h>
 #include <gst/rtsp-server/rtsp-server.h>
+#include <gst/app/gstappsrc.h>
 #include <string>
 #include <thread>
 
@@ -30,20 +31,18 @@ bool RtspServer::start(const std::string &mount_point, int port) {
 
     // === ПАЙПЛАЙН ДЛЯ КЛИЕНТОВ ===
     std::string pipeline_str =
-        "( appsrc name=src is-live=true format=time "
-        "caps=video/x-raw,format=BGR,width=" + std::to_string(width) +
-        ",height=" + std::to_string(height) +
-        ",framerate=" + std::to_string(fps) + "/1 ! "
+        "( appsrc name=src is-live=true format=time ! "
         "videoconvert ! "
         "video/x-raw,format=I420 ! "
         "videorate ! video/x-raw,framerate=" + std::to_string(fps) + "/1 ! "
-        "x264enc speed-preset=ultrafast tune=zerolatency bframes=0 "
+        "x264enc speed-preset=ultrafast tune=zerolatency bitrate=2048 bframes=0 "
         "key-int-max=" + std::to_string(fps) + " ! "
         "h264parse config-interval=1 ! "
         "rtph264pay name=pay0 pt=96 )";
 
     gst_rtsp_media_factory_set_launch(factory, pipeline_str.c_str());
     gst_rtsp_media_factory_set_shared(factory, TRUE);  // Несколько клиентов
+    gst_rtsp_media_factory_set_latency(factory, 0);
 
     // === ПОДКЛЮЧАЕМ ОБРАБОТЧИК "media-configure" ===
     // Вызывается при подключении каждого клиента
@@ -127,11 +126,25 @@ void RtspServer::onMediaConfigure(GstRTSPMediaFactory *factory,
     if (appsrc) {
         std::cout << "✅ Клиент подключился! appsrc готов" << std::endl;
 
-        // Сохраняем указатель для дальнейшего использования
-        // (в реальном проекте лучше хранить список для нескольких клиентов)
+        g_object_set(appsrc,
+                     "is-live", TRUE,
+                     "format", GST_FORMAT_TIME,
+                     "block", TRUE,
+                     nullptr);
+
+        GstCaps *caps = gst_caps_new_simple(
+            "video/x-raw",
+            "format", G_TYPE_STRING, "BGR",
+            "width", G_TYPE_INT, self->width,
+            "height", G_TYPE_INT, self->height,
+            "framerate", GST_TYPE_FRACTION, self->fps, 1,
+            nullptr);
+
+        gst_app_src_set_caps(GST_APP_SRC(appsrc), caps);
+        gst_caps_unref(caps);
+
         self->appsrc = appsrc;
 
-        // Не делаем unref — он будет жить пока живёт media
         gst_object_unref(element);
     } else {
         std::cerr << "❌ Не удалось найти appsrc в пайплайне" << std::endl;
