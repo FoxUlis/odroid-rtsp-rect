@@ -1,6 +1,7 @@
 #include <iostream>
 #include <csignal>
 #include <chrono>
+#include <regex>
 #include <thread>
 #include "camera_capture.h"
 #include "rectangle.h"
@@ -49,7 +50,12 @@ int main() {
     // Опционально: предпросмотр
     cv::namedWindow("Preview", cv::WINDOW_AUTOSIZE);
 
+    const int target_fps = 25;
+    const auto frame_duration = std::chrono::milliseconds(1000 / target_fps);
+
     while (running) {
+        auto frame_start = std::chrono::steady_clock::now();
+
         if (!cam.read(frame)) continue;
 
         // Обновление и отрисовка
@@ -59,19 +65,18 @@ int main() {
         // === ОТПРАВКА НА КОДИРОВАНИЕ ===
         encoder.pushFrame(frame);
 
-        frame_count++;
-
         // Предпросмотр (можно закомментировать для headless)
         cv::imshow("Preview", frame);
         if (cv::waitKey(1) == 'q') break;
 
-        // Прогресс
-        if (frame_count % 60 == 0) {
-            std::cout << "📼 Записано кадров: " << frame_count << std::endl;
+        auto frame_end = std::chrono::steady_clock::now();
+        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(frame_end - frame_start);
+
+        if (elapsed < frame_duration) {
+
         }
 
-        // Синхронизация ~30 FPS
-        std::this_thread::sleep_for(std::chrono::milliseconds(33));
+
     }
 
     // Статистика

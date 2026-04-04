@@ -36,15 +36,23 @@ bool StreamEncoder::init(const std::string &output_path) {
     // filesink: пишет в файл
 
     std::string pipeline_str =
-        "appsrc name=src emit-signals=false is-live=true "
+        "appsrc name=src "
+        "is-live=true "
+        "format=time "
+        "do-timestamp=true "
         "caps=video/x-raw,format=BGR,width=" + std::to_string(width) +
-        ",height=" + std::to_string(height) +
-        ",framerate=" + std::to_string(fps) + "/1 ! " +
-        "videoconvert ! " +
-        "video/x-raw,format=I420 ! " +
-        "x264enc speed-preset=ultrafast tune=zerolatency  ! " +
-        "h264parse ! " +
-        "video/x-h264,stream-format=byte-stream,alignment=au ! " +
+        ",height=" + std::to_string(height) + " ! "
+        "videoconvert ! "
+        "videorate ! "
+        "video/x-raw,format=I420,framerate=25/1 ! "
+        "x264enc "
+        "speed-preset=ultrafast "
+        "tune=zerolatency "
+        "bframes=0 "
+        "key-int-max=25 "
+        "byte-stream=true ! "
+        "h264parse config-interval=1 ! "
+        "video/x-h264,stream-format=byte-stream,alignment=au ! "
         "filesink location=" + output_path;
 
     std::cout << "Пайплайн GStreamer" << std::endl;
@@ -73,37 +81,27 @@ bool StreamEncoder::init(const std::string &output_path) {
 }
 
 void StreamEncoder::pushFrame(const cv::Mat &frame) {
-    if (!initialized || !appsrc || frame.empty()) {
-        return;
+
+        if (!initialized || !appsrc || frame.empty()) {
+            return;
+        }
+
+        cv::Mat continuousFrame = frame.isContinuous() ? frame : frame.clone();
+
+        const size_t dataSize = width * height * 3;
+
+        GstBuffer *buffer = gst_buffer_new_allocate(nullptr, dataSize, nullptr);
+        gst_buffer_fill(buffer, 0, continuousFrame.data, dataSize);
+
+        GstFlowReturn ret;
+        g_signal_emit_by_name(appsrc, "push-buffer", buffer, &ret);
+        gst_buffer_unref(buffer);
+
+        if (ret != GST_FLOW_OK) {
+            std::cerr << "Ошибка отправки кадра: "
+                      << gst_flow_get_name(ret) << std::endl;
+        }
     }
-
-    cv::Mat continuousFrame;
-
-    if(!frame.isContinuous()) {
-        continuousFrame = frame.clone();
-    } else {
-        continuousFrame = frame;
-    }
-
-    const size_t dataSize = width * height * 3;
-
-    GstBuffer *buffer = gst_buffer_new_allocate(nullptr, dataSize, nullptr);
-
-    gst_buffer_fill(buffer, 0, continuousFrame.data, dataSize);
-
-    GST_BUFFER_PTS(buffer) = timestamp;
-    GST_BUFFER_DURATION(buffer) = gst_util_uint64_scale(1, GST_SECOND, fps);
-    timestamp += GST_BUFFER_DURATION(buffer);
-
-    GstFlowReturn ret;
-    g_signal_emit_by_name(appsrc, "push-buffer", buffer, &ret);
-
-    gst_buffer_unref(buffer);
-
-    if(ret != GST_FLOW_OK) {
-        std::cerr << "Ошибка отправки кадра: " << gst_flow_get_name(ret) << std::endl;
-    }
-}
 
 void StreamEncoder::stop() {
     if (pipeline) {
