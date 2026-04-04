@@ -35,7 +35,12 @@ bool CameraCapture::open() {
 
 bool CameraCapture::read(cv::Mat &frame) {
     cap >> frame;
-    return !frame.empty();
+
+    if(frame.empty()) {
+        std::cerr << "Пустой кадр" << std::endl;
+        return false;
+    }
+    return true;
 }
 
 bool CameraCapture::isOpened() const {
