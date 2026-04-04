@@ -1,5 +1,6 @@
 #include "rtsp_server.h"
 #include "glib.h"
+#include "gst/gstpad.h"
 #include <iostream>
 #include <gst/gst.h>
 #include <gst/rtsp-server/rtsp-server.h>
@@ -34,7 +35,7 @@ bool RtspServer::start(const std::string &mount_point, int port) {
         "( appsrc name=src is-live=true format=time ! "
         "videoconvert ! "
         "video/x-raw,format=I420 ! "
-        "x264enc speed-preset=ultrafast tune=zerolatency bitrate=2048 key-int-max=30 ! "
+        "x264enc speed-preset=ultrafast tune=zerolatency bitrate=2048 key-int-max=30 force-idr=1 ! "
         "video/x-h264,profile=baseline ! "
         "rtph264pay name=pay0 pt=96 config-interval=1 )";
 
@@ -139,11 +140,12 @@ void RtspServer::onMediaConfigure(GstRTSPMediaFactory *factory,
                      "is-live", TRUE,
                      "format", GST_FORMAT_TIME,
                      "block", TRUE,
+                     "stream-type", GST_APP_STREAM_TYPE_STREAM,
                      nullptr);
 
         GstCaps *caps = gst_caps_new_simple(
             "video/x-raw",
-            "format", G_TYPE_STRING, "BGR",
+            "format", G_TYPE_STRING, "I420",
             "width", G_TYPE_INT, self->width,
             "height", G_TYPE_INT, self->height,
             "framerate", GST_TYPE_FRACTION, self->fps, 1,
@@ -162,6 +164,19 @@ void RtspServer::onMediaConfigure(GstRTSPMediaFactory *factory,
         std::cerr << "❌ Не удалось найти appsrc в пайплайне" << std::endl;
         gst_object_unref(element);
     }
+
+    GstBuffer *test_buf = gst_buffer_new_allocate(nullptr, self->width * self->height *3, nullptr);
+    gst_buffer_memset(test_buf, 0, 0, self->width * self->height * 3);
+
+    GST_BUFFER_PTS(test_buf) = 0;
+    GST_BUFFER_DTS(test_buf) = 0;
+    GST_BUFFER_DURATION(test_buf) = GST_SECOND / self->fps;
+
+    GstFlowReturn ret;
+    g_signal_emit_by_name(appsrc, "push-buffer", test_buf, &ret);
+    gst_buffer_unref(test_buf);
+
+    std::cout << "Тестовый кадр отправлен, ret =" << gst_flow_get_name(ret) << std::endl;
 }
 
 void RtspServer::onMediaPrepared(GstRTSPMedia *media, gpointer user_data) {
