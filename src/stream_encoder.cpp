@@ -10,7 +10,7 @@
 #include <string>
 
 StreamEncoder::StreamEncoder(int w, int h, int fps)
-    : rtsp_server(nullptr), width(w), height(h), fps(25),
+    : rtsp_server(nullptr), width(w), height(h), fps(fps),
     timestamp(0), initialized(false) {}
 
 StreamEncoder::~StreamEncoder() {
