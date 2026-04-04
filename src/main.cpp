@@ -6,6 +6,10 @@
 #include "rectangle.h"
 #include "stream_encoder.h"
 
+#ifdef __linux__
+#include <X11/Xlib.h>
+#endif
+
 bool running = true;
 
 void signal_handler(int /* signum */) {
@@ -14,7 +18,12 @@ void signal_handler(int /* signum */) {
 }
 
 int main() {
+    #ifdef __linux__
+        XInitThreads();
+    #endif
+
     signal(SIGINT, signal_handler);
+
 
     std::cout << "=== BOUNCECAST v0.5 ===" << std::endl;
     std::cout << "Этап 5: RTSP Стриминг" << std::endl;
