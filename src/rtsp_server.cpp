@@ -39,7 +39,7 @@ bool RtspServer::start(const std::string &mount_point, int port) {
         "rtph264pay name=pay0 pt=96 config-interval=1 )";
 
     gst_rtsp_media_factory_set_launch(factory, pipeline_str.c_str());
-    gst_rtsp_media_factory_set_shared(factory, TRUE);  // Несколько клиентов
+    gst_rtsp_media_factory_set_shared(factory, FALSE);  // Отключаем shared factory
     gst_rtsp_media_factory_set_latency(factory, 0);
 
     // Принудительно разрешаем только TCP (interleaved) транспорт
@@ -131,6 +131,9 @@ void RtspServer::onMediaConfigure(GstRTSPMediaFactory *factory,
 
     if (appsrc) {
         std::cout << "✅ Клиент подключился! appsrc готов" << std::endl;
+
+        // Разрешаем повторное использование media
+        gst_rtsp_media_set_reusable(media, TRUE);
 
         g_object_set(appsrc,
                      "is-live", TRUE,
