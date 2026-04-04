@@ -34,11 +34,9 @@ bool RtspServer::start(const std::string &mount_point, int port) {
         "( appsrc name=src is-live=true format=time ! "
         "videoconvert ! "
         "video/x-raw,format=I420 ! "
-        "videorate ! video/x-raw,framerate=" + std::to_string(fps) + "/1 ! "
-        "x264enc speed-preset=ultrafast tune=zerolatency bitrate=2048 bframes=0 "
-        "key-int-max=" + std::to_string(fps) + " ! "
-        "h264parse config-interval=1 ! "
-        "rtph264pay name=pay0 pt=96 )";
+        "x264enc speed-preset=ultrafast tune=zerolatency bitrate=2048 key-int-max=30 ! "
+        "video/x-h264,profile=baseline ! "
+        "rtph264pay name=pay0 pt=96 config-interval=1 )";
 
     gst_rtsp_media_factory_set_launch(factory, pipeline_str.c_str());
     gst_rtsp_media_factory_set_shared(factory, TRUE);  // Несколько клиентов
