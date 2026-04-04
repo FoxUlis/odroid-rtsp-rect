@@ -3,6 +3,7 @@
 #include <iostream>
 #include <gst/gst.h>
 #include <gst/rtsp-server/rtsp-server.h>
+#include <string>
 #include <thread>
 
 RtspServer::RtspServer(int w, int h, int f)
@@ -21,7 +22,8 @@ bool RtspServer::start(const std::string &mount_point, int port) {
 
     // === СОЗДАЁМ СЕРВЕР ===
     server = gst_rtsp_server_new();
-    g_object_set(server, "port", port, nullptr);
+    std::string port_str = std::to_string(port);
+    g_object_set(server, "service", port_str.c_str(), nullptr);
 
     // === СОЗДАЁМ ФАБРИКУ ===
     factory = gst_rtsp_media_factory_new();
