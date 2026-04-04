@@ -6,10 +6,6 @@
 #include "rectangle.h"
 #include "stream_encoder.h"
 
-#ifdef __linux__
-#include <X11/Xlib.h>
-#endif
-
 bool running = true;
 
 void signal_handler(int /* signum */) {
@@ -18,10 +14,6 @@ void signal_handler(int /* signum */) {
 }
 
 int main() {
-    #ifdef __linux__
-        XInitThreads();
-    #endif
-
     signal(SIGINT, signal_handler);
 
 
@@ -76,8 +68,8 @@ int main() {
         encoder.pushFrame(frame);
 
         // Предпросмотр (можно закомментировать для headless)
-        cv::imshow("Preview", frame);
-        if (cv::waitKey(1) == 'q') break;
+        // cv::imshow("Preview", frame);
+        // if (cv::waitKey(1) == 'q') break;
 
         auto frame_end = std::chrono::steady_clock::now();
         auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(frame_end - frame_start);
