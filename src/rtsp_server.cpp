@@ -1,7 +1,9 @@
 #include "rtsp_server.h"
+#include "glib.h"
 #include <iostream>
 #include <gst/gst.h>
 #include <gst/rtsp-server/rtsp-server.h>
+#include <thread>
 
 RtspServer::RtspServer(int w, int h, int f)
     : server(nullptr), factory(nullptr), appsrc(nullptr),
@@ -58,6 +60,12 @@ bool RtspServer::start(const std::string &mount_point, int port) {
         return false;
     }
 
+    main_loop = g_main_loop_new(nullptr, FALSE);
+
+    loop_thread = std::thread([this]() {
+        g_main_loop_run(main_loop);
+    });
+
     // === ФОРМИРУЕМ URL ===
     rtsp_url = "rtsp://<IP-плата>:" + std::to_string(port) + mount_point;
 
@@ -76,13 +84,22 @@ void RtspServer::stop() {
 
     std::cout << "Остановка RTSP сервера..." << std::endl;
 
-    // Останавливаем сервер
+    if (main_loop) {
+        g_main_loop_quit(main_loop);
+
+        if (loop_thread.joinable()) {
+            loop_thread.join();
+        }
+
+        g_main_loop_unref(main_loop);
+        main_loop = nullptr;
+    }
+
     if (server) {
         gst_object_unref(server);
         server = nullptr;
     }
 
-    // Фабрика освободится вместе с сервером
     factory = nullptr;
     appsrc = nullptr;
     running = false;

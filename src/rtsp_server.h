@@ -4,6 +4,7 @@
 #include <gst/gst.h>
 #include <gst/rtsp-server/rtsp-server.h>
 #include <string>
+#include <thread>
 #include <vector>
 
 class RtspServer {
@@ -41,6 +42,7 @@ private:
     std::string rtsp_url;
     bool running;
     GMainLoop *main_loop;
+    std::thread loop_thread;
 };
 
 #endif
