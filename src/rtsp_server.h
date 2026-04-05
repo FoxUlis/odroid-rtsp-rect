@@ -6,6 +6,7 @@
 #include <string>
 #include <thread>
 #include <vector>
+#include <atomic>
 
 class RtspServer {
 public:
@@ -46,8 +47,8 @@ private:
 
     int width, height, fps;
     std::string rtsp_url;
-    bool running;
-    bool client_ready;
+    std::atomic<bool> running;
+    std::atomic<bool> client_ready;
     GMainLoop *main_loop;
     std::thread loop_thread;
 };
