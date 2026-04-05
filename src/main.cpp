@@ -1,3 +1,4 @@
+#include <atomic>
 #include <iostream>
 #include <csignal>
 #include <chrono>
@@ -6,7 +7,7 @@
 #include "rectangle.h"
 #include "stream_encoder.h"
 
-bool running = true;
+std::atomic<bool> running{true};
 
 void signal_handler(int /* signum */) {
     std::cout << "\n Выход..." << std::endl;
@@ -34,7 +35,7 @@ int main() {
     Rectangle rect(30, 20, 50, 50);
 
     // 3. Кодировщик (RTSP)
-    StreamEncoder encoder(cam.getWidth(), cam.getHeight(), 30);
+    StreamEncoder encoder(cam.getWidth(), cam.getHeight(), 25);
     if (!encoder.initRtsp("/stream", 8554)) {
         std::cerr << "Ошибка инициализации encoder!" << std::endl;
         return -1;
