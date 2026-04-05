@@ -17,9 +17,19 @@ bool CameraCapture::open() {
         return false;
     }
 
-    cap.set(cv::CAP_PROP_FOURCC, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'));
-    cap.set(cv::CAP_PROP_FRAME_WIDTH, width);
-    cap.set(cv::CAP_PROP_FRAME_HEIGHT, height);
+    if (!cap.set(cv::CAP_PROP_FOURCC,
+        cv::VideoWriter::fourcc('M', 'J', 'P', 'G'))) {
+            std::cerr << "Не удалось установить MJPG" << std::endl;
+        }
+
+    if (!cap.set(cv::CAP_PROP_FRAME_WIDTH, width)) {
+        std::cerr << "Warning: Не удалось установить ширину" << std::endl;
+    }
+
+    if (!cap.set(cv::CAP_PROP_FRAME_HEIGHT, height)) {
+        std::cerr << "Warning: Не удалось установить высоту" << std::endl;
+    }
+
 
     std::cout << "Фактическое разрешение камеры: "
     << cap.get(cv::CAP_PROP_FRAME_WIDTH) << "x"
