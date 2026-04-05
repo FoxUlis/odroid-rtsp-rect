@@ -49,7 +49,9 @@ sudo apt-get install \
 Клиенты для просмотра потока
 
 ffplay (рекомендуется) - ffplay -rtsp_transport tcp rtsp://<IP>:8554/stream
+
 mpv - mpv --rtsp-transport=tcp rtsp://<IP>:8554/stream
+
 VLC - vlc :rtsp-transport=tcp rtsp://<IP>:8554/stream
 
 ⚠️ Важно: Сервер настроен на TCP-транспорт. Обязательно указывайте :rtsp-transport=tcp или -rtsp_transport tcp при подключении.
