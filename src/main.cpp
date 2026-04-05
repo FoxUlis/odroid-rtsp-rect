@@ -89,7 +89,7 @@ int main() {
     std::cout << "=== СТАТИСТИКА ===" << std::endl;
     std::cout << "Кадров: " << frame_count << std::endl;
     std::cout << "Время: " << duration.count() << " сек" << std::endl;
-    std::cout << "Средний FPS: " << (frame_count / (duration.count() ? duration.count() : 1)) << std::endl;
+    std::cout << "Средний FPS: " << (static_cast<double>(frame_count) / (duration.count() ? duration.count() : 1)) << std::endl;
 
     // Очистка
     cam.release();
