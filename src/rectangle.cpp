@@ -10,23 +10,25 @@ void Rectangle::update(int frame_width, int frame_height) {
     x += dx;
     y += dy;
 
-    // отскок от левой/правой границы
-    if (x <= 0) {
-        x = 0;
-        dx = -dx;
-    } else if (x + width >= frame_width) {
-        x = frame_width - width;
+    if (x < 0) {
+        x = -x;
         dx = -dx;
     }
 
-    if (y <= 0) {
-        y = 0;
-        dy = -dy;
-    } else if (y + height >= frame_height) {
-        y = frame_height - height;
+    if (x + width > frame_width) {
+        x = 2 * (frame_width-width) - x;
+        dx = -dx;
+    }
+
+    if (y < 0) {
+        y = -y;
         dy = -dy;
     }
 
+    if (y + height > frame_height) {
+        y = 2 * (frame_height - height) - y;
+        dy = -dy;
+    }
 }
 
 void Rectangle::draw(cv::Mat &frame) {
