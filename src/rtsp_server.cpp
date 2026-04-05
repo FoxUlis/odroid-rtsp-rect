@@ -102,18 +102,8 @@ void RtspServer::stop() {
         main_loop = nullptr;
     }
 
-    if (server) {
-        gst_object_unref(server);
-        server = nullptr;
-    }
+    cleanup();
 
-    if(appsrc) {
-        gst_object_unref(appsrc);
-        appsrc = nullptr;
-    }
-
-    factory = nullptr;
-    appsrc = nullptr;
     client_ready = false;
     running = false;
 
@@ -195,10 +185,13 @@ void RtspServer::cleanup() {
         gst_object_unref(factory);
         factory = nullptr;
     }
+
     if (server) {
         gst_object_unref(server);
         server = nullptr;
     }
-    appsrc = nullptr;
-    running = false;
+
+    if(appsrc){
+        gst_object_unref(appsrc);
+    }
 }
