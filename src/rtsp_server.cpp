@@ -1,5 +1,6 @@
 #include "rtsp_server.h"
 #include "glib.h"
+#include "gst/gstobject.h"
 #include "gst/gstpad.h"
 #include <iostream>
 #include <gst/gst.h>
@@ -39,7 +40,7 @@ bool RtspServer::start(const std::string &mount_point, int port) {
         "rtph264pay name=pay0 pt=96 config-interval=1 )";
 
     gst_rtsp_media_factory_set_launch(factory, pipeline_str.c_str());
-    gst_rtsp_media_factory_set_shared(factory, FALSE);  // Отключаем shared factory
+    gst_rtsp_media_factory_set_shared(factory, TRUE);
     gst_rtsp_media_factory_set_latency(factory, 0);
 
     // Принудительно разрешаем только TCP (interleaved) транспорт
@@ -106,6 +107,11 @@ void RtspServer::stop() {
         server = nullptr;
     }
 
+    if(appsrc) {
+        gst_object_unref(appsrc);
+        appsrc = nullptr;
+    }
+
     factory = nullptr;
     appsrc = nullptr;
     client_ready = false;
@@ -153,7 +159,7 @@ void RtspServer::onMediaConfigure(GstRTSPMediaFactory *factory,
         gst_app_src_set_caps(GST_APP_SRC(appsrc), caps);
         gst_caps_unref(caps);
 
-        self->appsrc = appsrc;
+        self->appsrc = GST_ELEMENT(gst_object_ref(appsrc));
 
         g_signal_connect(media, "prepared",
                          G_CALLBACK(onMediaPrepared), self);
