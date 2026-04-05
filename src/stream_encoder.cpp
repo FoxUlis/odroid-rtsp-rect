@@ -52,7 +52,7 @@ void StreamEncoder::pushFrame(const cv::Mat &frame) {
     // }
 
     // Отладка для проверки отправки кадра
-    // std::cerr << "Отправка кадра" << frame.cols << "x" << frame.cols << std::endl;
+    // std::cerr << "Отправка кадра" << frame.cols << "x" << frame.rows << std::endl;
 
     // Не отправляем кадры, пока клиент не готов (media не в PLAYING)
     if (!appsrc || !rtsp_server->isClientReady()) {
