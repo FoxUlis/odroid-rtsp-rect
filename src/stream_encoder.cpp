@@ -45,12 +45,14 @@ void StreamEncoder::pushFrame(const cv::Mat &frame) {
 
     GstElement *appsrc = rtsp_server->getAppsrc();
 
-    if(!appsrc){
-        std::cerr << "pushFrame: appsrc ещё не готов" << std::endl;
-        return;
-    }
+    // проверка готовности appsrc
+    // if(!appsrc){
+    //     std::cerr << "pushFrame: appsrc ещё не готов" << std::endl;
+    //     return;
+    // }
 
-    std::cerr << "Отправка кадра" << frame.cols << "x" << frame.cols << std::endl;
+    // Отладка для проверки отправки кадра
+    // std::cerr << "Отправка кадра" << frame.cols << "x" << frame.cols << std::endl;
 
     cv::Mat continuousFrame = frame.isContinuous() ? frame : frame.clone();
 
