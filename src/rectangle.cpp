@@ -22,7 +22,7 @@ void Rectangle::update(int frame_width, int frame_height) {
     if (y <= 0) {
         y = 0;
         dy = -dy;
-    } else if (y - height >= frame_height) {
+    } else if (y + height >= frame_height) {
         y = frame_height - height;
         dy = -dy;
     }
