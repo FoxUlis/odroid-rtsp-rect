@@ -54,29 +54,28 @@ void StreamEncoder::pushFrame(const cv::Mat &frame) {
     // Отладка для проверки отправки кадра
     // std::cerr << "Отправка кадра" << frame.cols << "x" << frame.cols << std::endl;
 
-    cv::Mat continuousFrame = frame.isContinuous() ? frame : frame.clone();
-
     // Не отправляем кадры, пока клиент не готов (media не в PLAYING)
     if (!appsrc || !rtsp_server->isClientReady()) {
         return;
     }
+
+    cv::Mat workingFrame;
 
     if (frame.cols != width || frame.rows != height) {
         std::cerr << "Размер кадра: " << frame.cols << "x" << frame.rows
         << "(ожидалось: " << width << "x" << height << ")" << std::endl;
 
         cv::Mat resized;
-        cv::resize(frame, resized, cv::Size(width, height));
-        continuousFrame  = resized;
+        cv::resize(frame, workingFrame, cv::Size(width, height));
     } else {
-        continuousFrame = frame.isContinuous() ? frame : frame.clone();
+        workingFrame = frame.isContinuous() ? frame : frame.clone();
     }
 
     const size_t dataSize = width * height * 3;
 
-    if(continuousFrame.total() * continuousFrame.elemSize() != dataSize) {
+    if(workingFrame.total() * workingFrame.elemSize() != dataSize) {
         std::cerr << "Размер данных не совпадает: "
-        << (continuousFrame.total() * continuousFrame.elemSize())
+        << (workingFrame.total() * workingFrame.elemSize())
         << " vs " << dataSize << std::endl;
 
         return;
@@ -85,7 +84,7 @@ void StreamEncoder::pushFrame(const cv::Mat &frame) {
     GstBuffer *buffer = gst_buffer_new_allocate(nullptr, dataSize, nullptr);
 
     //копирование данных
-    gst_buffer_fill(buffer, 0, continuousFrame.data, dataSize);
+    gst_buffer_fill(buffer, 0, workingFrame.data, dataSize);
 
     //Временные метки
     GST_BUFFER_PTS(buffer) = timestamp;
