@@ -2,6 +2,7 @@
 #include "glib.h"
 #include "gst/gstobject.h"
 #include "gst/gstpad.h"
+#include "gst/rtsp/gstrtsptransport.h"
 #include <iostream>
 #include <gst/gst.h>
 #include <gst/rtsp-server/rtsp-server.h>
@@ -46,7 +47,10 @@ bool RtspServer::start(const std::string &mount_point, int port) {
     // Принудительно разрешаем только TCP (interleaved) транспорт
     gst_rtsp_media_factory_set_protocols(
         factory,
-        GST_RTSP_LOWER_TRANS_TCP
+        static_cast<GstRTSPLowerTrans>(
+            GST_RTSP_LOWER_TRANS_UDP |
+            GST_RTSP_LOWER_TRANS_TCP
+        )
     );
 
     // === ПОДКЛЮЧАЕМ ОБРАБОТЧИК "media-configure" ===
